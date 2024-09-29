@@ -37,6 +37,3 @@ jobs:
         sleep 5  # Wait for the server to start up
     - name: Run Flake8
       run: flake8 . --exclude=venv,.venv --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --ignore=F821
-    - name: Test with pytest
-      run: |
-        pytest

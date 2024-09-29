@@ -220,11 +220,19 @@
             const k = $('input[name="k"]').val();
             const method = $('select[name="method"]').val();
 
+            if (!k) {
+                alert(`Choose a number of clusters`);
+            }
+
+            if (method == 'manual' && k != centers.length) {
+                alert(`Pleae select exactly ${k} centroids`);
+            }
+
             $.ajax({
                 url: '/run-convergence',
                 type: 'POST',
                 contentType: 'application/json',
-                data: JSON.stringify({ k: k, method: method }),
+                data: JSON.stringify({ k: k, method: method, centers: centers }),
                 success: function(data) {
                     $('#plotly-graph').hide();  
                     $('#kmeansGif').attr('src', 'data:image/png;base64,' + data.plot_url).show();  

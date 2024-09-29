@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMeans</title>
+    <link href="../static/style.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <div class="site-container">
+        <h1>KMeans Clustering Algorithm</h1>
+
+        <form class="form" action="../app.py" name="kmeans" method="POST">
+            <label for="k">Number of Clusters (k):</label>
+            <input name="k" type="number" class="k">
+            
+            <label for="method">Initialization Method:</label>
+            <select id="method-dropdown" name="method" class="method">
+                <option value="random">Random</option>
+                <option value="farthest">Farthest First</option>
+                <option value="kmeans++">KMeans++</option>
+                <option value="manual">Manual</option>
+            </select>
+            <div style="display: block; margin-top: 0px;" >
+                <button class="form-submit-button" id="run-kmeans">Step Through KMeans</button>
+                <button class="form-submit-button" id="run-convergence">Run to Convergence</button>
+            </div>
+        </form> 
+
+        <div style="display: block; margin-bottom: 20px;" >
+            <button class="form-submit-button" id="generate-dataset">Generate New Dataset</button>
+            <button class="form-submit-button" id="resetButton">Reset Algorithm</button>
+        </div>
+
+        <div id="plotly-graph" style="width: 600px; height: 400px; border: 1px solid #242424"></div>
+        <img id="kmeansGif" style="display:none; width: 600px; height: 400px; border: 1px solid #242424" alt="KMeans Animation">
+    </div>
+
+
+
+    <script>
+        let points = []; // Your data points
+        let centers = []; // Array to hold positions of centroids/red markers
+        let x, y;
+
+        // Function to render the graph using Plotly
+        function renderGraph(points) {
+            const clusters = {};
+
+            points.forEach(point => {
+                const [x, y, label] = point;
+                if (!clusters[label]) {
+                    clusters[label] = { x: [], y: [] };
+                }
+                clusters[label].x.push(x);
+                clusters[label].y.push(y);
+            });
+
+            // Create traces for each cluster
+            const dataTraces = Object.keys(clusters).map(label => {
+                return {
+                    x: clusters[label].x,
+                    y: clusters[label].y,
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: { color: 'blue' },
+                    showlegend: false
+                };
+            });
+
+            // Create trace for centroids/red markers
+            const centerTrace = {
+                x: centers.map(c => c[0]),
+                y: centers.map(c => c[1]),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                    color: 'red',
+                    symbol: 'x',
+                    size: 12
+                },
+                name: 'Centroid'
+            };
+
+            let layout = {
+                title: {
+                  text: 'KMeans Clustering Data',  // Set the title for the graph
+                  font: {
+                    family: 'Arial, sans-serif',
+                    size: 16,
+                    color: '#333'
+                  }
+                },
+                autosize: true,  // Make the plot automatically fit within its container
+                margin: {
+                    l: 50,  // Left margin
+                    r: 50,  // Right margin
+                    b: 50,  // Bottom margin
+                    t: 60,  // Top margin (to fit the title)
+                    pad: 5  // Padding around the plot
+                },
+                xaxis: {
+                  range: [-11, 11],  // Same x-axis range as in the Matplotlib image
+                  showgrid: true,
+                  zeroline: true,
+                  ticks: 'outside',
+                  tick0: -10,
+                  dtick: 5,  // Match the tick intervals with Matplotlib's plot
+                  gridcolor: '#e6e6e6',
+                  zerolinecolor: '#000',
+                },
+                yaxis: {
+                  range: [-11, 11],  // Same y-axis range as in the Matplotlib image
+                  showgrid: true,
+                  zeroline: true,
+                  ticks: 'outside',
+                  tick0: -10,
+                  dtick: 5,  // Match the tick intervals with Matplotlib's plot
+                  gridcolor: '#e6e6e6',
+                  zerolinecolor: '#000',
+                },
+                showlegend: false
+              };    
+
+            // Render the plot
+            Plotly.newPlot('plotly-graph', [{
+                x: points.map(p => p[0]),
+                y: points.map(p => p[1]),
+                mode: 'markers',
+                type: 'scatter',
+                marker: {
+                color: '#1f77b4',  // Use similar colors to the GIF for consistency
+                size: 10
+                }
+            }], layout).then(attach);
+        }
+
+
+        function attach() {
+            const graph = document.getElementById('plotly-graph')   
+            const xaxis = graph._fullLayout.xaxis;
+            const yaxis = graph._fullLayout.yaxis;
+            const l = graph._fullLayout.margin.l;
+            const t = graph._fullLayout.margin.t;
+
+            graph.addEventListener('mousemove', function(event) {
+                x = xaxis.p2c(event.x) - 22.276;
+                y = yaxis.p2c(event.y - t) + 32.3;
+            });
+        }
+        
+        $('#plotly-graph').on('plotly_click', function(event, data) {
+            let method = $('select[name="method"]').val();
+            if (method == 'manual') {   
+                const newTrace = {
+                    x: [x],
+                    y: [y],
+                    mode: 'markers',
+                    type: 'scatter',
+                    marker: {
+                        color: 'red',
+                        symbol: 'x',
+                        size: 12
+                    },
+                    name: 'Centroid'
+                }
+                centers.push([x, y]);
+                Plotly.addTraces('plotly-graph', newTrace);
+            };
+            
+            
+        });
+
+        let isRunning = false; 
+
+        $('#run-kmeans').click(function(event) {
+            event.preventDefault();
+            if (isRunning) return;
+            isRunning = true;
+            $('#loading-message').show(); 
+            $(this).prop('disabled', true);   
+
+            let k = $('input[name="k"]').val();
+            let method = $('select[name="method"]').val();
+
+            if (!k) {
+                alert(`Choose a number of clusters`);
+            }
+
+            if (method == 'manual' && k != centers.length) {
+                alert(`Pleae select exactly ${k} centroids`);
+            }
+
+            $.ajax({
+                url: '/find-kmeans',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ k: k, method: method, centers: centers }),
+                success: function(data) {
+                    $('#plotly-graph').hide();
+                    $('#kmeansGif').attr('src', 'data:image/gif;base64,' + data.plot_url).show();
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error: ", status, error);
+                    console.log("Response Text: ", xhr.responseText);
+                },
+                complete: function() {
+                    isRunning = false; 
+                    $('#run-kmeans').prop('disabled', false); 
+                    $('#loading-message').hide();
+                }
+            });
+        });
+
+        $('#run-convergence').click(function(event) {
+            event.preventDefault();
+            
+            const k = $('input[name="k"]').val();
+            const method = $('select[name="method"]').val();
+
+            $.ajax({
+                url: '/run-convergence',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ k: k, method: method }),
+                success: function(data) {
+                    $('#plotly-graph').hide();  
+                    $('#kmeansGif').attr('src', 'data:image/png;base64,' + data.plot_url).show();  
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX Error: ", status, error);
+                    console.log("Response Text: ", xhr.responseText);
+                }
+            });
+        });  
+
+        function fetchDataset() {
+            $.ajax({
+                type: 'POST',
+                url: '/generate-dataset',
+                success: function(data) {
+                    points = data.points;
+                    renderGraph(points);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            fetchDataset();
+        });
+
+        $('#generate-dataset').click(function(event) {
+            event.preventDefault();
+            fetchDataset();
+        });
+
+        $('#resetButton').click(function(event) {
+            event.preventDefault();
+            $.ajax({
+                type: 'POST',
+                url: '/reset',
+                success: function() {
+                    $('#plotly-graph').show();
+                    $('#kmeansGif').hide();   
+                    centers = []
+                    renderGraph(points);
+                }
+            });
+        });  
+    </script>
+    
+</body> 
+</html>

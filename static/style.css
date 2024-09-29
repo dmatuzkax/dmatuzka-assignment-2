@@ -1,0 +1,49 @@
+body {
+    text-align: center;
+    background-color: #dedede;
+    font-family: 'PT Sans', sans-serif;
+}
+
+h1 {
+    color: rgb(11, 83, 208);
+}
+
+.site-container, .form {
+    display: inline-flex;
+    flex-direction: column;
+}
+
+#plot {
+    width: 700px;
+    margin-top: 50px;
+}
+
+.method, .k {
+    width: 250px;
+    height: 25px;
+    align-self: center;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    border-radius: 0px;
+    border: 0.5px solid #eee;
+    background-color: #fff;
+    font-size: 15px;
+}
+
+.form-submit-button, button {
+    align-self: center;
+    width: 150px;
+    height: 40px;
+    margin: 10px;
+    border-radius: 0px;
+    background-color: rgb(11, 83, 208);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #fff;
+    color: rgb(11, 83, 208);
+    border: 1px solid rgb(11, 83, 208);
+}

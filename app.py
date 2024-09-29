@@ -61,8 +61,10 @@ def run_convergence():
     if method == 'manual':
         centers = request.json.get('centers') 
     else:
-        kmeans = KMeans(points, k, method)
-        kmeans.lloyds()  # Run Lloyd's algorithm
+        centers = []
+        
+    kmeans = KMeans(points, k, method, centers)
+    kmeans.lloyds()  # Run Lloyd's algorithm
     
     # Take the last snapshot as the image
     if kmeans.snaps:
